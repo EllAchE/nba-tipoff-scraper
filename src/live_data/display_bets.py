@@ -2,7 +2,6 @@ from typing import Any
 
 from src.classes.GameOdds import GameOdds
 from src.live_data.live_odds_data_handling import createAllOddsDict
-# todo update player spread calculation to include summary and kelly bet size
 # backlogtodo update player spread calculation to round
 
 
