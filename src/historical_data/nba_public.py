@@ -162,8 +162,8 @@ def getParticipatingTeamsFromId(id): # (id: str) -> dict[str, str]:
     homeTeamCity = response.home_team.get_dict()['data'][0][2]
     homeTeamName = response.home_team.get_dict()['data'][0][3]
     homeTeamId = response.home_team.get_dict()['data'][0][4]
-    
-    return {"home": homeTeamCity + ' ' + homeTeamName, "homeId": homeTeamId, "away": awayTeamCity + ' ' + awayTeamName, "awayId": awayTeamId}
+    return homeTeamCity, homeTeamName, homeTeamId, awayTeamCity, awayTeamName, awayTeamId
+    #return {"home": homeTeamCity + ' ' + homeTeamName, "homeId": homeTeamId, "away": awayTeamCity + ' ' + awayTeamName, "awayId": awayTeamId}
 
 def saveAllHistoricalStarters():
     stub = ENVIRONMENT.GAME_SUMMARY_UNFORMATTED_PATH
@@ -273,11 +273,11 @@ def getGamePlayersFromId(id):
 
 def getTipoffLine(pbpDf: DataFrame, returnIndex: bool = False):
     try:
-        tipoffSeries = pbpDf[pbpDf.EVENTMSGTYPE == 10]
+        tipoffSeries = pbpDf[pbpDf.EVENTMSGTYPE == 10] # 10=JUMP_BALL
         tipoffContent = tipoffSeries.iloc[0]
         type = 10
     except:
-        tipoffSeries = pbpDf[pbpDf.EVENTMSGTYPE == 7]
+        tipoffSeries = pbpDf[pbpDf.EVENTMSGTYPE == 7] # 7=VIOLATION
         tipoffContent = tipoffSeries.iloc[0]
         type = 7
 
@@ -293,37 +293,40 @@ def getTipoffLine(pbpDf: DataFrame, returnIndex: bool = False):
         raise ValueError('nothing for home or away, neutral said', tipoffContent.NEUTRALDESCRIPTION)
 
     if returnIndex:
-        return content, type, isHome, tipoffContent.index
-    return content, type, isHome
+        return content, type, isHome, tipoffContent, tipoffContent.index
+    return content, type, isHome, tipoffContent
 
 def getFirstScoreLine(gameCode, season):
     with open("Data/JSON/Public_NBA_API/shots_before_first_field_goal") as sbffg:
         firstScoreDict = json.load(sbffg)
     return firstScoreDict[season][gameCode]
 
-def parseDataFromTipoffLine(homeShort, awayShort, content, type, isHome, season):
-    tipper1 = getBballRefPlayerName(None)
-    tipper2 = getBballRefPlayerName(None)
-    possessingPlayer = getBballRefPlayerName(None)
+def parseDataFromTipoffLine(gameId, tipoffContent, type, isHome):
+    homeTeamCity, homeTeamName, homeTeamId, awayTeamCity, awayTeamName, awayTeamId = getParticipatingTeamsFromId(gameId)
+    tipper1 = getBballRefPlayerName(tipoffContent.PLAYER1_NAME)
+    tipper2 = getBballRefPlayerName(tipoffContent.PLAYER2_NAME)
     homeTipper = None
     awayTipper = None
-    firstScoret = None
+    firstScorer = None
     tipWinningTeam = None
     tipLosingTeam = None
-    possessingTeam = None
+    possessingPlayer = getBballRefPlayerName(tipoffContent.PLAYER3_NAME)
+    possessingPlayerLink = None
     firstScoringTeam = None
     scoredUponTeam = None
     tipoffWinner = None
+    tipWinnerlink = None
     tipoffLoser = None
     tipLoserLink = None
-    tipWinnerlink = None
     tipWinnerScores = None
+    print(homeTipper, awayTipper, firstScorer, tipWinningTeam, tipLosingTeam, possessingPlayer, possessingPlayerLink, firstScoringTeam,  scoredUponTeam, tipoffWinner, tipWinnerlink, tipoffLoser, tipLoserLink, tipWinnerScores)
 
 
 def getTipoffLineFromBballRefId(bballRef: str):
     gameId = getGameIdFromBballRef(bballRef)
     pbpDf = getGamePlayByPlay(gameId)
-    tipoffContent, type, isHome = getTipoffLine(pbpDf)
+    content, type, isHome, tipoffContent = getTipoffLine(pbpDf)
+    #parseDataFromTipoffLine(gameId, tipoffContent, type, isHome)
     return tipoffContent
 
 def splitAllSeasonsFirstShotDataToMultipleFiles():
