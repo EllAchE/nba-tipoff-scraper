@@ -1,10 +1,10 @@
-from src.odds_and_statistics.odds_calculator import convertPlayerLinesToSingleLine, returnGreaterOdds, \
-    positiveEvThresholdFromAmerican, kellyBetFromAOddsAndScoreProb, getEvMultiplier, getPlayerSpread, \
-    scoreFirstProb
 from src.live_data.live_odds_retrieval import getExpectedTipper
+from src.odds.odds_calculator import getEvMultiplier, getPlayerSpread, convertPlayerLinesToSingleLine, \
+    positiveEvThresholdFromAmerican, returnGreaterOdds, scoreFirstProb, kellyBetFromAOddsAndScoreProb
+
 
 class QuarterOdds:
-    def __init__(self, gameDict, teamOnly=False, playersOnly=False):
+    def __init__(self, gameDict, teamOnly=False, playersOnly=False, quarter="QUARTER_1"):
         self.awayPlayerFloorOdds = self.homePlayerFloorOdds = self.awayPlayerFloorOdds = self.homePlayerFloorOdds = self.awayPlayerFloorOdds = self.kellyBet = self.homeTeamFirstQuarterOdds = self.awayTeamFirstQuarterOdds = None
         self.home = gameDict['home']
         self.away = gameDict['away']
@@ -16,7 +16,7 @@ class QuarterOdds:
         self.isPlayersOnly = playersOnly
         gameStart = self.fetchedDatetime[:10] if self.gameDatetime is None else self.gameDatetime
         self.gameCode = self.home + " @ " + self.away + " " + gameStart
-        self.quarter = "QUARTER_1"
+        self.quarter = quarter
         self.isFullGame = False
 
         if not playersOnly:

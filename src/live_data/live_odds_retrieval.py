@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 
 import ENVIRONMENT
 from src.database.database_access import getUniversalTeamShortCode, getPlayerCurrentTeam, getUniversalPlayerName
-from src.odds_and_statistics.odds_calculator import checkEvPlayerCodesOddsLine, kellyBetFromAOddsAndScoreProb, decimalToAmerican
+from src.odds.odds_calculator import checkEvPlayerCodesOddsLine, kellyBetFromAOddsAndScoreProb, decimalToAmerican
 from src.utils import getTeamFullFromShort, getSoupFromUrl, sleepChecker, lowercaseNoSpace, removeNewLineChars
 
 
@@ -162,21 +162,24 @@ def bovadaPlayerOdds(playerBetGamesList):
             awayPlayerOdds = list()
 
             for player in selections:
-                actualOdds = player['odds'] if player['oddsOverride'] is None else player['oddsOverride']
-                if player['player']['team']['abbreviation'] == homeShort:
-                    homePlayerOdds.append({
-                        "player": player['player']['name'],
-                        "odds": actualOdds,
-                        "team": getUniversalTeamShortCode(homeShort)
-                    })
-                elif player['player']['team']['abbreviation'] == awayShort:
-                    awayPlayerOdds.append({
-                        "player": player['player']['name'],
-                        "odds": actualOdds,
-                        "team": getUniversalTeamShortCode(awayShort)
-                    })
-                else:
-                    raise ValueError("Bovada misformattted something in player and team codes")
+                try:
+                    actualOdds = player['odds'] if player['oddsOverride'] is None else player['oddsOverride']
+                    if player['player']['team']['abbreviation'] == homeShort:
+                        homePlayerOdds.append({
+                            "player": player['player']['name'],
+                            "odds": actualOdds,
+                            "team": getUniversalTeamShortCode(homeShort)
+                        })
+                    elif player['player']['team']['abbreviation'] == awayShort:
+                        awayPlayerOdds.append({
+                            "player": player['player']['name'],
+                            "odds": actualOdds,
+                            "team": getUniversalTeamShortCode(awayShort)
+                        })
+                    else:
+                        raise ValueError("Bovada misformattted something in player and team codes")
+                except:
+                    print('breaking error encountered in bovada odds for player', player)
 
             playerTeamDict[homePlayerOdds[0]['team']] = homePlayerOdds
             playerTeamDict[awayPlayerOdds[0]['team']] = awayPlayerOdds
@@ -219,6 +222,7 @@ def bovadaOdds():
         except:
             print("no player lines found for bovada game", gameLine)
 
+    # todo fix this to not break with just team odds
     return scoreFirstBetsBothTeamsFormatted
 
 def draftKingsOdds():
@@ -295,11 +299,11 @@ def draftKingsOdds():
     for team in teamSet:
         playerTeamDict[team] = []
     for rawLine in rawPlayerLines:
-        playerLine = addTeamToUnknownPlayerLine(rawLine)
         try:
+            playerLine = addTeamToUnknownPlayerLine(rawLine)
             playerTeamDict[playerLine['team']] += [playerLine]
         except:
-            print('player', playerLine, 'had a team error. Perhaps they were traded?')
+            print('player', playerLine, 'had a team error, team not found in possible gamges. Perhaps they were traded?')
 
     for gameLine in allGameLines:
         gameLine["homePlayerFirstQuarterOdds"] = playerTeamDict[gameLine["home"]]
@@ -342,7 +346,12 @@ def _fanduelOddsAll(today=True):
     allEventMatch = None
     for gameId in gameIdSet:
         gameResponse = requests.get('https://sportsbook.fanduel.com/cache/psevent/UK/1/false/{}.json'.format(gameId)).json()
-        print('running for fanduel game', gameResponse['externaldescription'])
+        try:
+            print('running for fanduel game', gameResponse['externaldescription'])
+        except:
+            print('a game had no matches for eventmarketgroups. Game has likely had an error and will be skipped')
+            continue
+
         sleepChecker(iterations=1, baseTime=2, randomMultiplier=8)
         # backlogtodo test the start time to ignore ongoing games, not just by date
         try:
@@ -431,7 +440,7 @@ def _fanduelOddsAll(today=True):
                 team = getUniversalTeamShortCode(playerLine['team']) # todo test the expanded exception handling here, and implement in other methods too
                 playerTeamDict[team] += [playerLine]
             except:
-                print('player', playerLine, 'had a team error. Perhaps they were traded?')
+                print('player', playerLine, 'or player', rawLine, 'had a team error, team not found in possible teams. Perhaps they were traded?')
 
         for gameLine in quarterOddsList:
             gameLine["homePlayerFirstQuarterOdds"] = playerTeamDict[gameLine["home"]]
